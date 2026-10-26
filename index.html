@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NoteBook Gym</title>
+<meta name="theme-color" content="#1f3fb8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NoteBook Gym">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=Kalam:wght@400;700&display=swap">
+<style>
+/* Layout: one phone-width column like a squared gym notebook; entry card on top, today's page below, history as past pages. Bottom tab bar. */
+:root{
+  --paper:#f6f8fb; --grid:#e3e9f2; --card:#ffffff; --ink:#1f3fb8; --text:#16202e; --muted:#667386;
+  --line:#d5dde8; --accent:#1f3fb8; --accent-fg:#ffffff; --hi:#ffe766; --danger:#c43b2f; --chip:#eef2f8;
+  --f-ui:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-hand:"Kalam","Bradley Hand","Segoe Print",cursive;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#11161e; --grid:#1a212c; --card:#18202b; --ink:#8fb0ff; --text:#e6ebf2; --muted:#8f9bad;
+  --line:#2a3443; --accent:#7f9fff; --accent-fg:#0d1320; --hi:#6b5d12; --danger:#ff7b6e; --chip:#212a37; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#11161e; --grid:#1a212c; --card:#18202b; --ink:#8fb0ff; --text:#e6ebf2; --muted:#8f9bad;
+  --line:#2a3443; --accent:#7f9fff; --accent-fg:#0d1320; --hi:#6b5d12; --danger:#ff7b6e; --chip:#212a37; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;padding-top:env(safe-area-inset-top,0px);
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:22px 22px;
+  color:var(--text); font-family:var(--f-ui); font-size:15px; line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-bottom:calc(84px + env(safe-area-inset-bottom,0px));
+  -webkit-tap-highlight-color:transparent;
+}
+.wrap{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:16px;padding-top:14px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.date{font-family:var(--f-num);font-weight:700;font-size:30px;line-height:1;letter-spacing:.01em;text-transform:uppercase}
+.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.sync{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--muted);display:inline-block}
+.sync.on i{background:#2fa36b}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+#machine{width:100%;border:none;border-bottom:2px solid var(--line);background:transparent;padding:4px 0 6px;font-family:var(--f-num);font-weight:600;font-size:24px;outline:none}
+#machine:focus{border-bottom-color:var(--accent)}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -2px;padding:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:500;white-space:nowrap}
+.chip.sel{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+
+.last{font-size:13px;color:var(--muted);display:flex;gap:12px;align-items:center;justify-content:space-between;min-height:34px}
+.last b{font-family:var(--f-hand);font-weight:400;color:var(--ink);font-size:16px}
+.spark{flex:none}
+
+.steppers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.step{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.step button{height:56px;border:none;background:var(--chip);font-size:22px;font-weight:600}
+.step button:active{background:var(--line)}
+.step .mid{display:flex;flex-direction:column;align-items:center;min-width:0}
+.step input{width:100%;text-align:center;border:none;background:transparent;font-family:var(--f-num);font-weight:700;font-size:30px;line-height:1;padding:0;outline:none;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.step input::-webkit-outer-spin-button,.step input::-webkit-inner-spin-button{-webkit-appearance:none}
+.step small{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+#log{height:54px;border:none;border-radius:12px;background:var(--accent);color:var(--accent-fg);font-family:var(--f-num);font-weight:700;font-size:21px;letter-spacing:.06em;text-transform:uppercase}
+#log:active{transform:scale(.985)}
+#log:disabled{opacity:.45}
+
+.page{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.page-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:12px 14px 8px;border-bottom:1px solid var(--line)}
+.page-h h2{margin:0;font-family:var(--f-num);font-weight:700;font-size:19px;text-transform:uppercase;letter-spacing:.03em}
+.page-h span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.row{display:grid;grid-template-columns:minmax(90px,38%) 1fr;gap:10px;padding:10px 14px;border-bottom:1px dashed var(--line);align-items:start}
+.row:last-child{border-bottom:none}
+.row .m{font-weight:600;font-size:14px;padding-top:3px;min-width:0;overflow-wrap:anywhere}
+.sets{display:flex;flex-wrap:wrap;gap:4px 6px;min-width:0}
+.set{font-family:var(--f-hand);color:var(--ink);font-size:18px;line-height:1.3;background:none;border:none;padding:0 3px;border-radius:4px;font-variant-numeric:tabular-nums}
+.set.pr{background:linear-gradient(transparent 45%,var(--hi) 45%,var(--hi) 88%,transparent 88%)}
+.set.sel{outline:2px solid var(--danger);outline-offset:1px}
+.set.static{cursor:default}
+.empty{padding:22px 14px;color:var(--muted);font-size:14px;text-align:center}
+.empty .ex{display:inline-block;margin-top:10px;font-family:var(--f-hand);color:var(--ink);opacity:.55;font-size:17px}
+
+.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--chip);font-size:13px}
+.toolbar button{border:none;border-radius:8px;padding:7px 12px;font-weight:600;font-size:13px}
+.del{background:var(--danger);color:var(--card)}
+.ghost{background:transparent;border:1px solid var(--line)!important}
+
+nav{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--card);border-top:1px solid var(--line);
+  padding:8px max(16px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;justify-content:center}
+nav .tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;max-width:520px}
+nav button{border:none;background:transparent;border-radius:10px;padding:10px;font-family:var(--f-num);font-weight:600;font-size:17px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+nav button[aria-selected="true"]{background:var(--chip);color:var(--text)}
+.dbinfo{padding:10px 14px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line)}
+.dbinfo code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--text);background:var(--chip);padding:1px 5px;border-radius:4px}
+.tablewrap{overflow-x:auto;max-height:60vh;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+th{position:sticky;top:0;background:var(--card);text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.n{text-align:right}
+.hint{font-size:12px;color:var(--muted);text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--paper);padding:8px 14px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:6}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.auth{max-width:380px;margin:12vh auto 0;display:flex;flex-direction:column;gap:14px}
+.brand{font-family:var(--f-num);font-weight:700;font-size:40px;line-height:1;text-transform:uppercase;letter-spacing:.01em}
+.brand span{font-family:var(--f-hand);font-weight:400;text-transform:none;color:var(--ink);font-size:26px;display:block;margin-top:6px;letter-spacing:0}
+.field{display:flex;flex-direction:column;gap:4px}
+.field input{height:46px;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:0 12px;font-size:16px}
+.btnrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{height:48px;border-radius:12px;border:1px solid var(--line);background:var(--chip);font-family:var(--f-num);font-weight:700;font-size:18px;letter-spacing:.05em;text-transform:uppercase}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.msg{font-size:14px;color:var(--muted);min-height:20px}
+.msg.err{color:var(--danger)}
+.sync.wait i{background:#d99a1c}
+.sync.off i{background:var(--danger)}
+.acct{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
+.acct span{min-width:0;overflow-wrap:anywhere}
+.acct button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:7px 12px;font-weight:600;font-size:13px}
+</style>
+</head>
+<body>
+<form class="auth" id="auth" hidden>
+  <div class="brand">NoteBook Gym<span>machine · kg · reps</span></div>
+  <div class="field"><label class="label" for="email">Email</label><input id="email" type="email" autocomplete="username" required></div>
+  <div class="field"><label class="label" for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" minlength="6" required></div>
+  <div class="btnrow"><button class="btn primary" type="submit" id="signin">Log in</button><button class="btn" type="button" id="signup">Sign up</button></div>
+  <div class="msg" id="msg">You only log in once on each device.</div>
+</form>
+<div class="wrap" id="app" hidden>
+  <header>
+    <div>
+      <div class="date" id="today-date">Today</div>
+      <div class="sub" id="today-sub">No sets yet</div>
+    </div>
+    <div class="sync" id="sync"><i></i><span>Loading</span></div>
+  </header>
+
+  <section id="view-today" style="display:flex;flex-direction:column;gap:16px">
+    <div class="card" aria-label="Log a set">
+      <div>
+        <label class="label" for="machine">Machine</label>
+        <input id="machine" placeholder="Leg Press" autocomplete="off" enterkeyhint="done">
+      </div>
+      <div class="chips" id="chips"></div>
+      <div class="last" id="last"></div>
+      <div class="steppers">
+        <div class="step">
+          <button type="button" data-k="kg" data-d="-2.5" aria-label="Less weight">−</button>
+          <div class="mid"><input id="kg" type="number" inputmode="decimal" step="0.5" min="0" value="20"><small>kg</small></div>
+          <button type="button" data-k="kg" data-d="2.5" aria-label="More weight">+</button>
+        </div>
+        <div class="step">
+          <button type="button" data-k="reps" data-d="-1" aria-label="Fewer reps">−</button>
+          <div class="mid"><input id="reps" type="number" inputmode="numeric" step="1" min="1" value="10"><small>reps</small></div>
+          <button type="button" data-k="reps" data-d="1" aria-label="More reps">+</button>
+        </div>
+      </div>
+      <button id="log" type="button">Log set</button>
+    </div>
+    <div class="page" id="today-page"></div>
+    <p class="hint">Tap a set to remove it. Highlighted sets are your heaviest on that machine.</p>
+  </section>
+
+  <section id="view-history" hidden style="flex-direction:column;gap:14px"></section>
+  <section id="view-data" hidden>
+    <div class="page">
+      <div class="page-h"><h2>Your data</h2><span id="data-count">0 rows</span></div>
+      <div class="dbinfo" id="dbinfo">Supabase table <code>sets</code> · one row per set you log.</div>
+      <div class="tablewrap"><table id="data-table">
+        <thead><tr><th>Logged at</th><th>Machine</th><th class="n">kg</th><th class="n">Reps</th><th>User</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="toolbar"><span>Export everything as a spreadsheet file.</span><button class="ghost" type="button" id="csv">Download CSV</button></div>
+      <div class="acct"><span id="who"></span><button type="button" id="signout">Log out</button></div>
+    </div>
+  </section>
+</div>
+
+<nav id="nav" hidden><div class="tabs" role="tablist">
+  <button id="tab-today" role="tab" aria-selected="true">Today</button>
+  <button id="tab-history" role="tab" aria-selected="false">History</button>
+  <button id="tab-data" role="tab" aria-selected="false">Data</button>
+</div></nav>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const DEFAULTS=["Leg Press","Chest Press","Lat Pulldown","Seated Row","Shoulder Press","Leg Extension","Leg Curl"];
+const $=id=>document.getElementById(id);
+let sets=[];            // {id,m,kg,reps,t,d}
+let selected=null;      // set id pending removal
+
+
+/* ---------- dates ---------- */
+const dayKey=(t=Date.now())=>{const d=new Date(t);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const fmtDay=k=>{const [y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"})};
+const num=n=>Number.isInteger(n)?String(n):String(+n.toFixed(2));
+
+/* ---------- storage: Supabase, with a local queue so sets save even with no signal ---------- */
+const SUPABASE_URL="https://vkkzouwhjxyqxdtcarrw.supabase.co";
+const SUPABASE_KEY="sb_publishable_0Og2FseAkdk9UDTJaVkCIw_qBEnvnSQ";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const LS={get(k,f){try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch(e){return f}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let uid=null,cache=[],queue={ins:[],del:[]},online=navigator.onLine,flushing=false;
+const K=()=>"ngym."+uid;
+const fromRow=r=>({id:r.id,m:r.machine,kg:Number(r.kg),reps:Number(r.reps),t:Date.parse(r.logged_at),d:dayKey(Date.parse(r.logged_at))});
+function publish(){
+  const gone=new Set(queue.del);
+  setData(cache.filter(r=>!gone.has(r.id)).map(fromRow).concat(queue.ins.map(fromRow)));
+  const n=queue.ins.length+queue.del.length;const s=$("sync");s.className="sync";
+  if(!online){s.classList.add("off");s.lastChild.textContent=n?`Offline · ${n} waiting`:"Offline"}
+  else if(n){s.classList.add("wait");s.lastChild.textContent=`${n} waiting`}
+  else{s.classList.add("on");s.lastChild.textContent="Synced"}
+}
+function saveLocal(){LS.set(K()+".cache",cache);LS.set(K()+".queue",queue)}
+async function pull(){
+  const {data,error}=await sb.from("sets").select("id,machine,kg,reps,logged_at").order("logged_at",{ascending:false}).limit(5000);
+  if(error)throw error;cache=data;saveLocal();publish();
+}
+async function flush(){
+  if(flushing||!uid)return;flushing=true;
+  try{
+    if(queue.ins.length){const batch=queue.ins.slice();
+      const {error}=await sb.from("sets").upsert(batch,{onConflict:"id",ignoreDuplicates:true});if(error)throw error;
+      const sent=new Set(batch.map(r=>r.id));cache=cache.concat(batch);queue.ins=queue.ins.filter(r=>!sent.has(r.id))}
+    if(queue.del.length){const ids=queue.del.slice();
+      const {error}=await sb.from("sets").delete().in("id",ids);if(error)throw error;
+      cache=cache.filter(r=>!ids.includes(r.id));queue.del=queue.del.filter(i=>!ids.includes(i))}
+    online=true;saveLocal();await pull();
+  }catch(e){online=navigator.onLine&&!(e instanceof TypeError);publish()}
+  finally{flushing=false}
+}
+const store={
+  async add(s){queue.ins.push({id:crypto.randomUUID(),machine:s.m,kg:s.kg,reps:s.reps,logged_at:new Date(s.t).toISOString()});saveLocal();publish();flush()},
+  async remove(id){const i=queue.ins.findIndex(r=>r.id===id);if(i>=0)queue.ins.splice(i,1);else queue.del.push(id);saveLocal();publish();flush()}
+};
+async function startApp(session){
+  uid=session.user.id;$("who").textContent="Logged in as "+session.user.email;
+  cache=LS.get(K()+".cache",[]);queue=LS.get(K()+".queue",{ins:[],del:[]});
+  $("auth").hidden=true;$("app").hidden=false;$("nav").hidden=false;publish();flush();
+}
+function showLogin(){uid=null;$("app").hidden=true;$("nav").hidden=true;$("auth").hidden=false}
+function say(t,err){const m=$("msg");m.textContent=t;m.classList.toggle("err",!!err)}
+$("auth").addEventListener("submit",async e=>{e.preventDefault();say("Logging in…");
+  const {data,error}=await sb.auth.signInWithPassword({email:$("email").value.trim(),password:$("pw").value});
+  if(error)return say(error.message==="Invalid login credentials"?"Wrong email or password.":error.message,true);startApp(data.session)});
+$("signup").onclick=async()=>{const email=$("email").value.trim(),password=$("pw").value;
+  if(!email||password.length<6)return say("Enter your email and a password of at least 6 characters.",true);
+  say("Creating your account…");const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});
+  if(error)return say(error.message,true);
+  if(data.session)startApp(data.session);else say("Account created. Open the confirmation email, then come back and log in.")};
+$("signout").onclick=async()=>{await sb.auth.signOut();showLogin()};
+addEventListener("online",()=>{online=true;flush()});addEventListener("offline",()=>{online=false;publish()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)flush()});setInterval(flush,30000);
+function setData(a){sets=a.slice().sort((x,y)=>x.t-y.t);render()}
+async function connect(){const {data}=await sb.auth.getSession();if(data.session)startApp(data.session);else showLogin()}
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+/* ---------- derived ---------- */
+function machines(){const seen=new Map();for(let i=sets.length-1;i>=0;i--)if(!seen.has(sets[i].m))seen.set(sets[i].m,1);
+  const list=[...seen.keys()];DEFAULTS.forEach(d=>{if(!list.some(x=>x.toLowerCase()===d.toLowerCase()))list.push(d)});return list}
+const same=(a,b)=>a.trim().toLowerCase()===b.trim().toLowerCase();
+function bestKg(m){let b=0;sets.forEach(s=>{if(same(s.m,m)&&s.kg>b)b=s.kg});return b}
+function byDay(list){const g=new Map();list.forEach(s=>{if(!g.has(s.d))g.set(s.d,[]);g.get(s.d).push(s)});return g}
+function byMachine(list){const g=new Map();list.forEach(s=>{const k=[...g.keys()].find(x=>same(x,s.m))||s.m;if(!g.has(k))g.set(k,[]);g.get(k).push(s)});return g}
+
+/* ---------- render ---------- */
+function render(){
+  const today=dayKey();const todays=sets.filter(s=>s.d===today);
+  $("today-date").textContent=fmtDay(today);
+  const vol=todays.reduce((a,s)=>a+s.kg*s.reps,0);
+  $("today-sub").textContent=todays.length?`${todays.length} set${todays.length===1?"":"s"} · ${byMachine(todays).size} machine${byMachine(todays).size===1?"":"s"} · ${num(vol)} kg moved`:"No sets yet today";
+  renderChips();renderLast();
+  $("today-page").replaceChildren(pageEl("Today's page",todays,true));
+  renderHistory();renderData();
+}
+function renderData(){
+  const rows=sets.slice().reverse();$("data-count").textContent=rows.length+" rows";
+  const tb=$("data-table").tBodies[0];
+  if(!rows.length){tb.innerHTML=`<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:18px">No rows yet. Log a set and it appears here.</td></tr>`;return}
+  tb.replaceChildren(...rows.map(s=>{const tr=document.createElement("tr");const dt=new Date(s.t);
+    [dt.toLocaleDateString("en-GB",{day:"2-digit",month:"short"})+" "+dt.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}),s.m,num(s.kg),s.reps,"You"]
+      .forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===2||i===3)td.className="n";tr.append(td)});return tr}));
+}
+function csv(){const q=v=>/[",\n]/.test(v)?'"'+String(v).replace(/"/g,'""')+'"':v;
+  return "logged_at,day,machine,kg,reps\n"+sets.map(s=>[new Date(s.t).toISOString(),s.d,q(s.m),s.kg,s.reps].join(",")).join("\n")}
+document.getElementById("csv").onclick=()=>{const url=URL.createObjectURL(new Blob([csv()],{type:"text/csv"}));
+  const a=document.createElement("a");a.href=url;a.download="notebook-gym-"+dayKey()+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+function renderChips(){
+  const cur=$("machine").value;
+  $("chips").replaceChildren(...machines().slice(0,14).map(m=>{
+    const b=document.createElement("button");b.type="button";b.className="chip"+(same(m,cur)?" sel":"");b.textContent=m;
+    b.onclick=()=>{$("machine").value=m;prefill(m);renderChips();renderLast()};return b}));
+}
+function prefill(m){
+  const prev=sets.filter(s=>same(s.m,m));if(!prev.length)return;
+  const l=prev[prev.length-1];$("kg").value=num(l.kg);$("reps").value=l.reps;
+}
+function renderLast(){
+  const m=$("machine").value.trim();const box=$("last");
+  if(!m){box.textContent="Pick a machine or type a new one.";return}
+  const prev=sets.filter(s=>same(s.m,m)&&s.d!==dayKey());
+  if(!prev.length){box.textContent="First time on this machine.";return}
+  const days=byDay(prev);const keys=[...days.keys()];const lastK=keys[keys.length-1];
+  const info=document.createElement("div");info.style.minWidth="0";
+  info.innerHTML=`Last time · ${fmtDay(lastK)}<br>`;
+  const b=document.createElement("b");b.textContent=days.get(lastK).map(s=>`${num(s.kg)}×${s.reps}`).join("  ");info.append(b);
+  box.replaceChildren(info,spark(keys.slice(-8).map(k=>Math.max(...days.get(k).map(s=>s.kg)))));
+}
+function spark(vals){
+  const w=96,h=34,n=vals.length,max=Math.max(...vals),min=Math.min(...vals)*0.85;
+  const bw=Math.min(10,(w-2)/n-3);const ns="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(ns,"svg");svg.setAttribute("viewBox",`0 0 ${w} ${h}`);svg.setAttribute("width",w);svg.setAttribute("height",h);svg.classList.add("spark");
+  svg.setAttribute("role","img");svg.setAttribute("aria-label","Top weight per session: "+vals.map(num).join(", ")+" kg");
+  vals.forEach((v,i)=>{const bh=max===min?h*0.6:4+(v-min)/(max-min)*(h-6);const r=document.createElementNS(ns,"rect");
+    r.setAttribute("x",w-(n-i)*(bw+3));r.setAttribute("y",h-bh);r.setAttribute("width",bw);r.setAttribute("height",bh);r.setAttribute("rx",2);
+    r.setAttribute("fill",i===n-1?"var(--ink)":"var(--line)");svg.append(r)});
+  return svg;
+}
+function pageEl(title,list,editable){
+  const frag=document.createDocumentFragment();
+  const h=document.createElement("div");h.className="page-h";
+  const vol=list.reduce((a,s)=>a+s.kg*s.reps,0);
+  h.innerHTML=`<h2></h2><span>${list.length} sets · ${num(vol)} kg</span>`;h.querySelector("h2").textContent=title;frag.append(h);
+  if(!list.length){const e=document.createElement("div");e.className="empty";
+    e.innerHTML=`Pick a machine above, set the weight and reps, tap <b>Log set</b>.<br><span class="ex">e.g. Leg Press &nbsp; 60×12 &nbsp; 70×10 &nbsp; 70×8</span>`;frag.append(e);return frag}
+  byMachine(list).forEach((arr,m)=>{
+    const row=document.createElement("div");row.className="row";
+    const name=document.createElement("div");name.className="m";name.textContent=m;
+    const wrap=document.createElement("div");wrap.className="sets";const best=bestKg(m);
+    arr.forEach(s=>{const b=document.createElement(editable?"button":"span");b.className="set"+(s.kg===best&&best>0?" pr":"")+(selected===s.id?" sel":"")+(editable?"":" static");
+      b.textContent=`${num(s.kg)}×${s.reps}`;
+      if(editable){b.type="button";b.setAttribute("aria-label",`${num(s.kg)} kg for ${s.reps} reps. Tap to remove`);b.onclick=()=>{selected=selected===s.id?null:s.id;render()}}
+      wrap.append(b)});
+    row.append(name,wrap);frag.append(row);
+    if(editable&&arr.some(s=>s.id===selected)){
+      const tb=document.createElement("div");tb.className="toolbar";const s=arr.find(x=>x.id===selected);
+      tb.innerHTML=`<span>Remove ${num(s.kg)}×${s.reps}?</span><div style="display:flex;gap:6px"><button class="ghost" type="button">Keep</button><button class="del" type="button">Remove</button></div>`;
+      tb.querySelector(".ghost").onclick=()=>{selected=null;render()};
+      tb.querySelector(".del").onclick=async()=>{const id=selected;selected=null;try{await store.remove(id);toast("Set removed")}catch(e){toast("Couldn't remove. Try again.")}};
+      frag.append(tb)}
+  });
+  return frag;
+}
+function renderHistory(){
+  const v=$("view-history");const days=byDay(sets);const keys=[...days.keys()].filter(k=>k!==dayKey()).reverse();
+  if(!keys.length){v.innerHTML=`<div class="page"><div class="empty">Past sessions show up here as notebook pages, newest first.</div></div>`;return}
+  v.replaceChildren(...keys.map(k=>{const p=document.createElement("div");p.className="page";p.append(pageEl(fmtDay(k),days.get(k),false));return p}));
+}
+
+/* ---------- actions ---------- */
+document.querySelectorAll(".step button").forEach(b=>b.onclick=()=>{
+  const i=$(b.dataset.k);const v=Math.max(b.dataset.k==="reps"?1:0,(parseFloat(i.value)||0)+parseFloat(b.dataset.d));i.value=num(v)});
+$("machine").addEventListener("input",()=>{renderChips();renderLast()});
+$("machine").addEventListener("change",()=>{prefill($("machine").value);renderLast()});
+$("log").onclick=async()=>{
+  const m=$("machine").value.trim();const kg=parseFloat($("kg").value);const reps=parseInt($("reps").value,10);
+  if(!m){toast("Add a machine name first");$("machine").focus();return}
+  if(!(kg>=0)||!(reps>0)){toast("Check weight and reps");return}
+  const known=machines().find(x=>same(x,m))||m;
+  $("log").disabled=true;
+  try{await store.add({m:known,kg,reps,t:Date.now(),d:dayKey()});toast(`Logged ${known} ${num(kg)}×${reps}`)}
+  catch(e){toast("Couldn't save that set. Try again.")}
+  $("log").disabled=false;
+};
+function tab(which){["today","history","data"].forEach(k=>{const on=k===which;$("view-"+k).hidden=!on;$("tab-"+k).setAttribute("aria-selected",on)});
+  $("view-history").style.display=which==="history"?"flex":"none";window.scrollTo(0,0)}
+["today","history","data"].forEach(k=>$("tab-"+k).onclick=()=>tab(k));
+let tt;function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),1800)}
+
+render();connect();
+</script>
+</body>
+</html>
