@@ -56,7 +56,7 @@ h1{margin:0;font-size:24px;font-weight:700;line-height:1.2;letter-spacing:-.01em
 .tile{display:flex;flex-direction:column;gap:8px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-height:132px;min-width:0}
 .tile:active{background:var(--raised)}
 .tile .t{font-size:16px;font-weight:600;display:flex;justify-content:space-between}
-.tile .t::after{content:"›";color:var(--muted);font-weight:400}
+.tile .t::after{content:"›";content:"›"/"";color:var(--muted);font-weight:400}
 .tile .v{font-size:30px;line-height:1.1;margin-top:auto;overflow-wrap:anywhere}
 .tile .v small{font-size:14px;color:var(--muted)}
 .tile .v.words{font-size:15px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -410,7 +410,7 @@ function renderHome(today,todays,vol){
   const n=noteFor(today);
   $("h-notes").textContent=n&&n.body.trim()?n.body.trim():"Nothing written today";
   $("h-notes").style.color=n&&n.body.trim()?"":"var(--muted)";
-  $("h-notes-c").textContent=`${docs("notes").filter(x=>x.body.trim()).length} pages`;
+  const np=docs("notes").filter(x=>x.body.trim()).length;$("h-notes-c").textContent=`${np} page${np===1?"":"s"}`;
   const past=[...byDay(sets).keys()].filter(k=>k!==today);
   val("h-hist",String(past.length),past.length===1?"day":"days");
   $("h-hist-c").textContent=past.length?"Last: "+fmtDay(past[past.length-1]):"Past sessions show here";
