@@ -16,8 +16,11 @@ function seed(){
   localStorage.setItem("ngym.t.docs",JSON.stringify({workouts:[{id:"w1",name:"Legs",machines:["Leg Press","Leg Curl"]}],
     notes:[{day:k(d(0)),body:"Slept 7h."}],weights:[{day:k(d(3)),kg:78.8},{day:k(d(0)),kg:78.4}]}));
 }
-function checks(){const go=()=>{const t=document.getElementById("h-train");t&&t.textContent?setTimeout(run,300):setTimeout(go,100)};go();function run(){
-  const r=[],ok=(c,m)=>r.push((c?"PASS ":"FAIL ")+m),$=id=>document.getElementById(id),vis=id=>!$(id).hidden;
+function checks(){const go=()=>{const t=document.getElementById("h-train");t&&t.textContent?setTimeout(run,300):setTimeout(go,100)};go();async function run(){
+  const $=id=>document.getElementById(id),vis=id=>!$(id).hidden,r=[];
+  const seen=()=>` (showing ${VIEWS.find(k=>vis("view-"+k))||"nothing"}, address #${location.hash.slice(1)})`;
+  const ok=(c,m)=>r.push(c?"PASS "+m:"FAIL "+m+seen());
+  const popped=()=>new Promise(done=>{addEventListener("popstate",()=>setTimeout(done,0),{once:true});setTimeout(done,2000)});
   ok(vis("view-home")&&!vis("view-today"),"starts on home");
   ok(!$("view-data")&&!$("signup"),"no Data screen, no Sign up button");
   ok($("h-train").textContent.startsWith("3"),"Train tile shows today's 3 sets");
@@ -29,11 +32,12 @@ function checks(){const go=()=>{const t=document.getElementById("h-train");t&&t.
   $("free-name").value="Hip Thrust";$("free-addbtn").click();
   ok($("cur-name").textContent==="Hip Thrust","typed exercise becomes current");
   $("log").click();ok(queue.ins.length===1&&queue.ins[0].machine==="Hip Thrust","set logged for Hip Thrust");
-  document.querySelector("#view-today [data-back]").click();
-  setTimeout(()=>{ok(vis("view-home")&&!location.hash,"Back button returns home");
-    ok($("h-train").textContent.startsWith("4"),"Train tile now shows 4 sets");
-    document.querySelector('[data-go="weight"]').click();ok(vis("view-weight"),"Weight tile opens Weight");
-    history.back();setTimeout(()=>{ok(vis("view-home"),"phone back gesture returns home");report(r)},200)},200)}}
+  let p=popped();document.querySelector("#view-today [data-back]").click();await p;
+  ok(vis("view-home")&&!location.hash,"Back button returns home");
+  ok($("h-train").textContent.startsWith("4"),"Train tile now shows 4 sets");
+  document.querySelector('[data-go="weight"]').click();ok(vis("view-weight"),"Weight tile opens Weight");
+  p=popped();history.back();await p;
+  ok(vis("view-home"),"phone back gesture returns home");report(r)}}
 
 function report(r){const fail=r.filter(x=>x.startsWith("FAIL")).length,p=document.createElement("pre");p.id="out";
   p.style.cssText="position:fixed;inset:auto 0 0 0;max-height:50vh;overflow:auto;margin:0;padding:12px;background:#fff;color:#000;border-top:3px solid "+(fail?"#c4242a":"#2e7d32")+";z-index:9";
@@ -43,6 +47,7 @@ fetch("index.html",{cache:"no-store"}).then(x=>x.text()).then(h=>{
   sub('<script src="https://cdn.jsdelivr',`<script>(${seed})()<\/script><script>(${checks})()<\/script><script src="https://cdn.jsdelivr`);
   sub('const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);','const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);sb.from=()=>{throw new TypeError("test: offline")};');
   sub('show(location.hash.slice(1)||"home");connect();','show(location.hash.slice(1)||"home");startApp({user:{id:"t"}});');
+  history.replaceState(null,"",location.pathname);  // start on Home even if the address still ends in #weight from clicking around
   document.open();document.write(h);document.close();
 }).catch(e=>document.getElementById("out").textContent="FAIL "+e.message);
 </script>
