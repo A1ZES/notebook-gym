@@ -1,5 +1,5 @@
 // Keeps the app opening with no signal: serve the saved copy, refresh it in the background.
-const CACHE = "notebook-gym-v1";
+const CACHE = "notebook-gym-v2";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-180.png", "icon-192.png",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
