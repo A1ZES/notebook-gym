@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>NoteBook Gym tests</title>
+<!-- Click-through checks for index.html: sample data, Supabase cut off, never touches the real account.
+     Needs a web server (fetch): run `npx serve .` (or open /test.html on the hosted site) and open test.html. -->
+<!-- The test page replaces itself with the app (no iframe: Back and history.back() must act on this page), then adds the results at the bottom. -->
+<pre id="out">Running…</pre>
+<script>
+function seed(){
+  const d=n=>{const x=new Date();x.setDate(x.getDate()-n);x.setHours(12,0,0,0);return x};
+  const k=t=>{const x=new Date(t);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+  const rows=[];let i=0;const add=(n,m,kg,reps)=>rows.push({id:"s"+(i++),machine:m,kg,reps,logged_at:new Date(d(n).getTime()+i*60000).toISOString()});
+  [[6,"Leg Press",60,12],[4,"Chest Press",40,10],[2,"Leg Press",70,12],[0,"Chest Press",45,10],[0,"Chest Press",47.5,8],[0,"Seated Row",45,10]].forEach(a=>add(...a));
+  ["queue","dq","wsel"].forEach(x=>localStorage.removeItem("ngym.t."+x));
+  localStorage.setItem("ngym.t.cache",JSON.stringify(rows));
+  localStorage.setItem("ngym.t.docs",JSON.stringify({workouts:[{id:"w1",name:"Legs",machines:["Leg Press","Leg Curl"]}],
+    notes:[{day:k(d(0)),body:"Slept 7h."}],weights:[{day:k(d(3)),kg:78.8},{day:k(d(0)),kg:78.4}]}));
+}
+function checks(){const go=()=>{const t=document.getElementById("h-train");t&&t.textContent?setTimeout(run,300):setTimeout(go,100)};go();async function run(){
+  const $=id=>document.getElementById(id),vis=id=>!$(id).hidden,r=[];
+  const seen=()=>` (showing ${VIEWS.find(k=>vis("view-"+k))||"nothing"}, address #${location.hash.slice(1)})`;
+  const ok=(c,m)=>r.push(c?"PASS "+m:"FAIL "+m+seen());
+  const popped=()=>new Promise(done=>{addEventListener("popstate",()=>setTimeout(done,0),{once:true});setTimeout(done,2000)});
+  ok(vis("view-home")&&!vis("view-today"),"starts on home");
+  ok(!$("view-data")&&!$("signup"),"no Data screen, no Sign up button");
+  ok($("h-train").textContent.startsWith("3"),"Train tile shows today's 3 sets");
+  ok($("h-notes-c").textContent==="1 page","Notes tile says 1 page");
+  document.querySelector('[data-go="today"]').click();ok(vis("view-today")&&location.hash==="#today","Train tile opens Train");
+  [...document.querySelectorAll("#wchips .chip")].find(b=>b.textContent==="Free").click();
+  ok(vis("free-add")&&$("w-edit").hidden,"Free shows the add box, hides Edit workout");
+  ok(document.querySelectorAll("#exchips .chip").length>=7,"Free lists every exercise");
+  $("free-name").value="Hip Thrust";$("free-addbtn").click();
+  ok($("cur-name").textContent==="Hip Thrust","typed exercise becomes current");
+  $("log").click();ok(queue.ins.length===1&&queue.ins[0].machine==="Hip Thrust","set logged for Hip Thrust");
+  let p=popped();document.querySelector("#view-today [data-back]").click();await p;
+  ok(vis("view-home")&&!location.hash,"Back button returns home");
+  ok($("h-train").textContent.startsWith("4"),"Train tile now shows 4 sets");
+  document.querySelector('[data-go="weight"]').click();ok(vis("view-weight"),"Weight tile opens Weight");
+  p=popped();history.back();await p;
+  ok(vis("view-home"),"phone back gesture returns home");report(r)}}
+
+function report(r){const fail=r.filter(x=>x.startsWith("FAIL")).length,p=document.createElement("pre");p.id="out";
+  p.style.cssText="position:fixed;inset:auto 0 0 0;max-height:50vh;overflow:auto;margin:0;padding:12px;background:#fff;color:#000;border-top:3px solid "+(fail?"#c4242a":"#2e7d32")+";z-index:9";
+  p.textContent=r.join("\n")+"\n\n"+(fail?fail+" FAILED":"ALL "+r.length+" PASS");document.body.append(p)}
+fetch("index.html",{cache:"no-store"}).then(x=>x.text()).then(h=>{
+  const sub=(a,b)=>{if(!h.includes(a))throw Error("test hook not found in index.html: "+a);h=h.replace(a,()=>b)};
+  sub('<script src="https://cdn.jsdelivr',`<script>(${seed})()<\/script><script>(${checks})()<\/script><script src="https://cdn.jsdelivr`);
+  sub('const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);','const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);sb.from=()=>{throw new TypeError("test: offline")};');
+  sub('show(location.hash.slice(1)||"home");connect();','show(location.hash.slice(1)||"home");startApp({user:{id:"t"}});');
+  history.replaceState(null,"",location.pathname);  // start on Home even if the address still ends in #weight from clicking around
+  document.open();document.write(h);document.close();
+}).catch(e=>document.getElementById("out").textContent="FAIL "+e.message);
+</script>
