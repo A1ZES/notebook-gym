@@ -15,3 +15,4 @@ Data is stored in Supabase, one row per user per item, protected by row-level se
 Everything is saved on the device first and sent to Supabase when there is signal.
 
 Open the site on iPhone in Safari → Share → Add to Home Screen.
+ss
